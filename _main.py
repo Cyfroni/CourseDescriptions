@@ -1,14 +1,16 @@
 import re
 from collections import defaultdict
+from time import sleep
 
 import requests
 from docx import Document
 from googletrans import Translator
 
-SOURCE = "https://www.one-tab.com/page/f0KtngUZQByfAkpBUi8LEA?fbclid=IwAR2KfjzVWRXhHT8-489m91op1_BDbk53KqGG5qphY6ELm-mPadT5dP8nxtU"
+SOURCE = "https://www.one-tab.com/page/NKYb3JWuQMmmIfZRy2A91g"
 HTTP = 'https://usosweb.usos.pw.edu.pl/'
 URL_pattern = re.escape(f"""href="{HTTP}""") + "(.*?)" + re.escape('">')
 TABLE_pattern = re.escape("<table class='grey' cellspacing='1px'>") + "(.*?)" + re.escape('</table>')
+translator = Translator()
 
 
 def get_utf(_source):
@@ -26,7 +28,7 @@ def get_columns(_row):
 def clean_html(_raw_html):
     _raw_html = _raw_html.replace(r'<br>', '\n')
     _raw_text = re.sub(r'<.*?>', '', _raw_html)
-    # _raw_text = unicodedata.normalize('NFD', _raw_text)#.decode('utf-8', 'ignore')
+    # _raw_text = unicodedata.normalize('NFD', _raw_text).encode('utf-8', 'ignore')
     # _raw_text = re.sub(r'[^\x00-\x7F]+', '', _raw_text)
     _raw_text = re.sub(r'^\s*', '', _raw_text)
     _raw_text = re.sub(r'\s{2,}', ' ', _raw_text)
@@ -76,6 +78,7 @@ def add_paragraph(_document, _data, _translation, _elem):
 
 def description_docx(_data, _translation=True):
     name = _data['Nazwa przedmiotu:_en']
+    file_name = f"[{_data['Kod wydziałowy:']}]{name}.docx"
 
     document = Document()
     document.add_heading(name, 0)
@@ -91,11 +94,11 @@ def description_docx(_data, _translation=True):
     for line in lines:
         add_paragraph(document, _data, _translation, line)
 
-    document.save(f"{name}.docx")
+    document.save(file_name)
 
 
 def write_to_file(_data, log=True):
-    file_name = _data['Kod przedmiotu:'] + '.doc'
+    file_name = f"[{_data['Kod wydziałowy:']}]{_data['Nazwa przedmiotu:_en']}.txt"
     with open(file_name, 'w+') as file:
         file.truncate(0)
         content = description_txt(_data)
@@ -104,7 +107,13 @@ def write_to_file(_data, log=True):
         file.write(content)
 
 
-translator = Translator()
+def translate(_text):
+    sleep(10)
+    return translator.translate(text).text
+
+
+translator.translate('안녕하세요.')  # test
+
 urls = re.findall(URL_pattern, get_utf(SOURCE))
 
 for rest in urls:
@@ -115,17 +124,9 @@ for rest in urls:
     for row in get_rows(table):
         cols = get_columns(row)
         text = clean_html(cols[1])
-        text_en = 'None'
-        try:
-            print(text)
-            # text_en = translator.translate(text).text
-        except:
-            pass
 
         data[cols[0]] = text
-        data[cols[0] + '_en'] = text_en
+        data[cols[0] + '_en'] = translate(text)
 
     write_to_file(data)
     description_docx(data)
-
-    break
