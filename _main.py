@@ -6,7 +6,7 @@ import requests
 from docx import Document
 from googletrans import Translator
 
-SOURCE = "https://www.one-tab.com/page/NKYb3JWuQMmmIfZRy2A91g"
+SOURCE = "https://www.one-tab.com/page/o2BPpimRRFusk83UBwmeDA"
 HTTP = 'https://usosweb.usos.pw.edu.pl/'
 URL_pattern = re.escape(f"""href="{HTTP}""") + "(.*?)" + re.escape('">')
 TABLE_pattern = re.escape("<table class='grey' cellspacing='1px'>") + "(.*?)" + re.escape('</table>')
@@ -79,6 +79,7 @@ def add_paragraph(_document, _data, _translation, _elem):
 def description_docx(_data, _translation=True):
     name = _data['Nazwa przedmiotu:_en']
     file_name = f"[{_data['Kod wydziałowy:']}]{name}.docx"
+    file_name = re.sub(r'[:\\/]', '', file_name)
 
     document = Document()
     document.add_heading(name, 0)
@@ -99,6 +100,7 @@ def description_docx(_data, _translation=True):
 
 def write_to_file(_data, log=True):
     file_name = f"[{_data['Kod wydziałowy:']}]{_data['Nazwa przedmiotu:_en']}.txt"
+    file_name = re.sub(r'[:\\/]', '', file_name)
     with open(file_name, 'w+') as file:
         file.truncate(0)
         content = description_txt(_data)
@@ -108,11 +110,15 @@ def write_to_file(_data, log=True):
 
 
 def translate(_text):
-    sleep(10)
-    return translator.translate(text).text
+    times = (len(_text) // 2000) + 1
+    translated_text = ''
+    for i in range(times):
+        sleep(1)
+        translated_text += translator.translate(text[i * 2000: (i + 1) * 2000]).text
+    return translated_text
 
 
-translator.translate('안녕하세요.')  # test
+print(translator.translate('안녕하세요.'))  # test
 
 urls = re.findall(URL_pattern, get_utf(SOURCE))
 
@@ -128,5 +134,5 @@ for rest in urls:
         data[cols[0]] = text
         data[cols[0] + '_en'] = translate(text)
 
-    write_to_file(data)
+    # write_to_file(data)
     description_docx(data)
